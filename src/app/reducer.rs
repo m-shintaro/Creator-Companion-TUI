@@ -274,7 +274,8 @@ fn on_key(state: &mut AppState, key: crossterm::event::KeyEvent) -> Vec<Effect> 
             vec![]
         }
         KeyCode::Down => {
-            state.log_scroll = state.log_scroll.saturating_add(1);
+            let max_scroll = (state.logs.len() as u16).saturating_sub(1);
+            state.log_scroll = state.log_scroll.saturating_add(1).min(max_scroll);
             vec![]
         }
         _ => match state.screen {
@@ -614,8 +615,9 @@ fn on_projects_key(state: &mut AppState, key: crossterm::event::KeyEvent) -> Vec
             vec![]
         }
         KeyCode::Char('j') => {
-            if !state.projects.is_empty() {
-                state.selected_project = (state.selected_project + 1).min(state.projects.len() - 1);
+            let len = state.filtered_projects().len();
+            if len > 0 {
+                state.selected_project = (state.selected_project + 1).min(len - 1);
             }
             vec![]
         }
@@ -652,11 +654,11 @@ fn on_manage_key(state: &mut AppState, key: crossterm::event::KeyEvent) -> Vec<E
             vec![]
         }
         KeyCode::Char('h') => {
-            state.manage_focus_available = false;
+            state.manage_focus_available = true;
             vec![]
         }
         KeyCode::Char('l') => {
-            state.manage_focus_available = true;
+            state.manage_focus_available = false;
             vec![]
         }
         KeyCode::Char('i') => {

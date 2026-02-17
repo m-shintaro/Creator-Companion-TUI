@@ -80,7 +80,7 @@ cargo test
 
 | キー | 動作 |
 |------|------|
-| `h` / `l` | Installed / Available ペインにフォーカス切替 |
+| `h` / `l` | Available（左）/ Installed（右）ペインにフォーカス切替 |
 | `j` / `k` | フォーカス中のペインで選択移動 |
 | `+` | Available ペインで選択中のパッケージをインストール（`=` `:` `＋` `a` も可） |
 | `-` | Available ペインで選択中のパッケージを削除（`_` `－` `x` も可） |
@@ -196,7 +196,7 @@ Two-pane layout: Available packages / Installed packages.
 
 | Key | Action |
 |-----|--------|
-| `h` / `l` | Focus Installed / Available pane |
+| `h` / `l` | Focus Available (left) / Installed (right) pane |
 | `j` / `k` | Move selection in focused pane |
 | `+` | Install selected available package (also `=` `:` `＋` `a`) |
 | `-` | Remove selected available package (also `_` `－` `x`) |

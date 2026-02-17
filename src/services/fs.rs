@@ -68,7 +68,8 @@ pub fn read_manifest(project_path: &Path) -> Result<ManifestSummary> {
             packages.push(PackageInfo {
                 name: name.clone(),
                 version: version_value
-                    .as_str()
+                    .get("version")
+                    .and_then(|v| v.as_str())
                     .map(|v| v.to_string())
                     .unwrap_or_else(|| version_value.to_string()),
             });

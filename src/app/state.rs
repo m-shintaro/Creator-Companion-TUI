@@ -93,23 +93,12 @@ pub struct LogEntry {
     pub text: String,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct SystemChecks {
     pub vpm_version: Option<String>,
     pub hub_check: Option<String>,
     pub unity_check: Option<String>,
     pub unity_list: Vec<String>,
-}
-
-impl Default for SystemChecks {
-    fn default() -> Self {
-        Self {
-            vpm_version: None,
-            hub_check: None,
-            unity_check: None,
-            unity_list: Vec::new(),
-        }
-    }
 }
 
 #[derive(Debug, Clone)]
