@@ -115,9 +115,10 @@ async fn handle_effect(
                 let _ = tx.send(Action::ManifestLoaded(result));
             });
         }
-        Effect::RunVpmCommand {
+        Effect::RunCommand {
             task_id,
             label,
+            program,
             args,
         } => {
             let tx = action_tx.clone();
@@ -127,7 +128,7 @@ async fn handle_effect(
 
             tokio::spawn(async move {
                 let command_result = client
-                    .run_command(task_id, label.clone(), args, token, tx.clone())
+                    .run_command(task_id, label.clone(), &program, args, token, tx.clone())
                     .await;
 
                 if let Err(err) = command_result {

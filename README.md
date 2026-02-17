@@ -106,7 +106,11 @@ cargo test
 | `u` | `vpm check unity` |
 | `l` | `vpm list unity` |
 | `s` | `vpm open settingsFolder` |
+| `i` | vpm CLI をインストール（dotnet が必要） |
+| `p` | vpm CLI を更新（dotnet が必要） |
 | `c` | 最新の実行中タスクをキャンセル |
+
+起動時に `dotnet --version` と `vpm --version` を自動チェックし、Prerequisites セクションにステータスを表示します。
 
 ## データ保存先
 
@@ -222,7 +226,11 @@ Two-pane layout: Available packages / Installed packages.
 | `u` | `vpm check unity` |
 | `l` | `vpm list unity` |
 | `s` | `vpm open settingsFolder` |
+| `i` | Install vpm CLI (requires dotnet) |
+| `p` | Update vpm CLI (requires dotnet) |
 | `c` | Cancel latest running task |
+
+On startup, `dotnet --version` and `vpm --version` are checked automatically and shown in the Prerequisites section.
 
 ## Data locations
 

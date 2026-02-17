@@ -14,18 +14,21 @@ impl VpmClient {
         &self,
         task_id: u64,
         _label: String,
+        program: &str,
         args: Vec<String>,
         token: CancellationToken,
         action_tx: mpsc::UnboundedSender<Action>,
     ) -> Result<()> {
-        let mut command = Command::new("vpm");
+        let mut command = Command::new(program);
         command
             .args(args)
             .stdout(std::process::Stdio::piped())
             .stderr(std::process::Stdio::piped())
             .kill_on_drop(true);
 
-        let mut child = command.spawn().context("failed to spawn vpm")?;
+        let mut child = command
+            .spawn()
+            .with_context(|| format!("failed to spawn {program}"))?;
 
         let mut readers: Vec<JoinHandle<()>> = Vec::new();
 

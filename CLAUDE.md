@@ -47,7 +47,7 @@ The app follows a unidirectional data flow:
 ### Services (`src/services/`)
 
 - **`fs.rs`** — config/cache I/O; reads `Packages/vpm-manifest.json` for projects; loads available packages from VCC's cache at `~/.local/share/VRChatCreatorCompanion/Repos/`
-- **`vpm.rs`** — `VpmClient` spawns the `vpm` CLI as a subprocess, streams stdout/stderr lines back as `Action::TaskOutput`, supports cancellation via `CancellationToken`
+- **`vpm.rs`** — `VpmClient` spawns subprocesses (`vpm`, `dotnet`, etc. via `program` param), streams stdout/stderr lines back as `Action::TaskOutput`, supports cancellation via `CancellationToken`
 
 ### UI (`src/ui/`)
 
@@ -58,6 +58,6 @@ The app follows a unidirectional data flow:
 
 Long-running vpm commands are tracked as `TaskRecord` entries in `AppState`. Each task has an ID, label, streamed output lines, and a `TaskState` (Running/Success/Failed/Cancelled). Cancellation is wired through `tokio_util::sync::CancellationToken`.
 
-## External dependency
+## External dependencies
 
-The app shells out to the `vpm` CLI (VRChat Package Manager). It must be installed and on `PATH` for package operations to work.
+The app shells out to `vpm` (VRChat Package Manager CLI) and `dotnet` (.NET SDK). On startup it auto-detects both via `--version` checks. The Settings screen shows prerequisite status and provides one-key install/update for `vpm` via `dotnet tool install/update`.

@@ -13,6 +13,7 @@ pub fn reduce(state: &mut AppState, action: Action) -> Vec<Effect> {
             Effect::LoadConfig,
             Effect::LoadAvailablePackages,
             enqueue_system_task(state, "vpm --version", ["--version"]),
+            enqueue_dotnet_task(state, "dotnet --version", ["--version"]),
         ],
         Action::Tick => {
             state.tick_count = state.tick_count.saturating_add(1);
@@ -138,10 +139,12 @@ pub fn reduce(state: &mut AppState, action: Action) -> Vec<Effect> {
             };
             state.push_log(Some(task_id), format!("[{task_id}:{prefix}] {line}"));
 
-            if task_is_label(state, task_id, "vpm --version")
-                && matches!(stream, OutputStream::Stdout)
-            {
-                state.system_checks.vpm_version = Some(line);
+            if matches!(stream, OutputStream::Stdout) {
+                if task_is_label(state, task_id, "vpm --version") {
+                    state.system_checks.vpm_version = Some(line);
+                } else if task_is_label(state, task_id, "dotnet --version") {
+                    state.system_checks.dotnet_version = Some(line);
+                }
             }
             vec![]
         }
@@ -154,6 +157,7 @@ pub fn reduce(state: &mut AppState, action: Action) -> Vec<Effect> {
         } => {
             let mut next_effects = Vec::new();
             let mut deferred_log: Option<String> = None;
+            let mut recheck_vpm = false;
             if let Some(task) = state.tasks.iter_mut().find(|t| t.id == task_id) {
                 task.exit_code = exit_code;
                 task.error = error.clone();
@@ -165,6 +169,12 @@ pub fn reduce(state: &mut AppState, action: Action) -> Vec<Effect> {
                     TaskState::Failed
                 };
 
+                if task.label == "vpm --version" && !success {
+                    state.system_checks.vpm_version = Some("not installed".to_string());
+                }
+                if task.label == "dotnet --version" && !success {
+                    state.system_checks.dotnet_version = Some("not installed".to_string());
+                }
                 if task.label == "vpm check hub" {
                     state.system_checks.hub_check = Some(task_state_text(task));
                 }
@@ -182,6 +192,12 @@ pub fn reduce(state: &mut AppState, action: Action) -> Vec<Effect> {
                 }
                 if task.label.starts_with("vpm add repo ") {
                     next_effects.push(Effect::LoadAvailablePackages);
+                }
+                if (task.label == "dotnet tool install vpm"
+                    || task.label == "dotnet tool update vpm")
+                    && success
+                {
+                    recheck_vpm = true;
                 }
                 if success {
                     if let Some(project) = task.pending_add_project.clone() {
@@ -208,6 +224,13 @@ pub fn reduce(state: &mut AppState, action: Action) -> Vec<Effect> {
             }
             if let Some(line) = deferred_log {
                 state.push_log(Some(task_id), line);
+            }
+            if recheck_vpm {
+                next_effects.push(enqueue_system_task(
+                    state,
+                    "vpm --version",
+                    ["--version"],
+                ));
             }
 
             let message = if cancelled {
@@ -766,6 +789,32 @@ fn on_settings_key(state: &mut AppState, key: crossterm::event::KeyEvent) -> Vec
             "vpm list repos",
             ["list", "repos"],
         )],
+        KeyCode::Char('i') => {
+            if state.system_checks.dotnet_version.as_deref() == Some("not installed") {
+                state.status_line =
+                    "dotnet required. Install .NET 8 SDK: https://dotnet.microsoft.com/download/dotnet/8.0".to_string();
+                vec![]
+            } else {
+                vec![enqueue_dotnet_task(
+                    state,
+                    "dotnet tool install vpm",
+                    ["tool", "install", "--global", "vrchat.vpm.cli"],
+                )]
+            }
+        }
+        KeyCode::Char('p') => {
+            if state.system_checks.dotnet_version.as_deref() == Some("not installed") {
+                state.status_line =
+                    "dotnet required. Install .NET 8 SDK: https://dotnet.microsoft.com/download/dotnet/8.0".to_string();
+                vec![]
+            } else {
+                vec![enqueue_dotnet_task(
+                    state,
+                    "dotnet tool update vpm",
+                    ["tool", "update", "--global", "vrchat.vpm.cli"],
+                )]
+            }
+        }
         KeyCode::Char('c') => {
             if let Some(task) = state
                 .tasks
@@ -972,9 +1021,10 @@ fn remove_selected_package(state: &mut AppState, force: bool) -> Vec<Effect> {
     )]
 }
 
-fn enqueue_project_task(
+fn enqueue_command_task(
     state: &mut AppState,
     label: String,
+    program: &str,
     args: Vec<String>,
     refresh_manifest_path: Option<PathBuf>,
     pending_add_project: Option<ProjectMeta>,
@@ -993,11 +1043,22 @@ fn enqueue_project_task(
     state.status_line = format!("Running {label}");
     state.push_log(Some(task_id), format!("[task:{task_id}] start {label}"));
 
-    Effect::RunVpmCommand {
+    Effect::RunCommand {
         task_id,
         label,
+        program: program.to_string(),
         args,
     }
+}
+
+fn enqueue_project_task(
+    state: &mut AppState,
+    label: String,
+    args: Vec<String>,
+    refresh_manifest_path: Option<PathBuf>,
+    pending_add_project: Option<ProjectMeta>,
+) -> Effect {
+    enqueue_command_task(state, label, "vpm", args, refresh_manifest_path, pending_add_project)
 }
 
 fn enqueue_system_task<const N: usize>(
@@ -1008,6 +1069,21 @@ fn enqueue_system_task<const N: usize>(
     enqueue_project_task(
         state,
         label.to_string(),
+        args.into_iter().map(|v| v.to_string()).collect(),
+        None,
+        None,
+    )
+}
+
+fn enqueue_dotnet_task<const N: usize>(
+    state: &mut AppState,
+    label: &str,
+    args: [&str; N],
+) -> Effect {
+    enqueue_command_task(
+        state,
+        label.to_string(),
+        "dotnet",
         args.into_iter().map(|v| v.to_string()).collect(),
         None,
         None,

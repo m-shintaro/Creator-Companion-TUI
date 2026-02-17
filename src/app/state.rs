@@ -95,6 +95,7 @@ pub struct LogEntry {
 
 #[derive(Debug, Clone, Default)]
 pub struct SystemChecks {
+    pub dotnet_version: Option<String>,
     pub vpm_version: Option<String>,
     pub hub_check: Option<String>,
     pub unity_check: Option<String>,

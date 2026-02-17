@@ -12,9 +12,10 @@ pub enum Effect {
     ReadManifest {
         project_path: PathBuf,
     },
-    RunVpmCommand {
+    RunCommand {
         task_id: u64,
         label: String,
+        program: String,
         args: Vec<String>,
     },
     CancelTask {
