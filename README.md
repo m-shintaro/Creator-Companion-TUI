@@ -106,8 +106,8 @@ cargo test
 | `u` | `vpm check unity` |
 | `l` | `vpm list unity` |
 | `s` | `vpm open settingsFolder` |
-| `i` | vpm CLI をインストール（dotnet が必要） |
-| `p` | vpm CLI を更新（dotnet が必要） |
+| `i` | vpm CLI をインストール（dotnet 未導入時は自動インストール） |
+| `p` | vpm CLI を更新（dotnet 未導入時は自動インストール） |
 | `c` | 最新の実行中タスクをキャンセル |
 
 起動時に `dotnet --version` と `vpm --version` を自動チェックし、Prerequisites セクションにステータスを表示します。
@@ -226,8 +226,8 @@ Two-pane layout: Available packages / Installed packages.
 | `u` | `vpm check unity` |
 | `l` | `vpm list unity` |
 | `s` | `vpm open settingsFolder` |
-| `i` | Install vpm CLI (requires dotnet) |
-| `p` | Update vpm CLI (requires dotnet) |
+| `i` | Install vpm CLI (auto-installs dotnet if missing) |
+| `p` | Update vpm CLI (auto-installs dotnet if missing) |
 | `c` | Cancel latest running task |
 
 On startup, `dotnet --version` and `vpm --version` are checked automatically and shown in the Prerequisites section.

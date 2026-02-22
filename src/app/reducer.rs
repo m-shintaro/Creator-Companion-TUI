@@ -158,6 +158,7 @@ pub fn reduce(state: &mut AppState, action: Action) -> Vec<Effect> {
             let mut next_effects = Vec::new();
             let mut deferred_log: Option<String> = None;
             let mut recheck_vpm = false;
+            let mut recheck_dotnet = false;
             if let Some(task) = state.tasks.iter_mut().find(|t| t.id == task_id) {
                 task.exit_code = exit_code;
                 task.error = error.clone();
@@ -198,6 +199,7 @@ pub fn reduce(state: &mut AppState, action: Action) -> Vec<Effect> {
                     && success
                 {
                     recheck_vpm = true;
+                    recheck_dotnet = true;
                 }
                 if success {
                     if let Some(project) = task.pending_add_project.clone() {
@@ -226,9 +228,12 @@ pub fn reduce(state: &mut AppState, action: Action) -> Vec<Effect> {
                 state.push_log(Some(task_id), line);
             }
             if recheck_vpm {
-                next_effects.push(enqueue_system_task(
+                next_effects.push(enqueue_system_task(state, "vpm --version", ["--version"]));
+            }
+            if recheck_dotnet {
+                next_effects.push(enqueue_dotnet_task(
                     state,
-                    "vpm --version",
+                    "dotnet --version",
                     ["--version"],
                 ));
             }
@@ -790,30 +795,18 @@ fn on_settings_key(state: &mut AppState, key: crossterm::event::KeyEvent) -> Vec
             ["list", "repos"],
         )],
         KeyCode::Char('i') => {
-            if state.system_checks.dotnet_version.as_deref() == Some("not installed") {
-                state.status_line =
-                    "dotnet required. Install .NET 8 SDK: https://dotnet.microsoft.com/download/dotnet/8.0".to_string();
-                vec![]
-            } else {
-                vec![enqueue_dotnet_task(
-                    state,
-                    "dotnet tool install vpm",
-                    ["tool", "install", "--global", "vrchat.vpm.cli"],
-                )]
-            }
+            vec![enqueue_dotnet_vpm_task_with_bootstrap(
+                state,
+                "dotnet tool install vpm",
+                "install",
+            )]
         }
         KeyCode::Char('p') => {
-            if state.system_checks.dotnet_version.as_deref() == Some("not installed") {
-                state.status_line =
-                    "dotnet required. Install .NET 8 SDK: https://dotnet.microsoft.com/download/dotnet/8.0".to_string();
-                vec![]
-            } else {
-                vec![enqueue_dotnet_task(
-                    state,
-                    "dotnet tool update vpm",
-                    ["tool", "update", "--global", "vrchat.vpm.cli"],
-                )]
-            }
+            vec![enqueue_dotnet_vpm_task_with_bootstrap(
+                state,
+                "dotnet tool update vpm",
+                "update",
+            )]
         }
         KeyCode::Char('c') => {
             if let Some(task) = state
@@ -1058,7 +1051,14 @@ fn enqueue_project_task(
     refresh_manifest_path: Option<PathBuf>,
     pending_add_project: Option<ProjectMeta>,
 ) -> Effect {
-    enqueue_command_task(state, label, "vpm", args, refresh_manifest_path, pending_add_project)
+    enqueue_command_task(
+        state,
+        label,
+        "vpm",
+        args,
+        refresh_manifest_path,
+        pending_add_project,
+    )
 }
 
 fn enqueue_system_task<const N: usize>(
@@ -1080,11 +1080,49 @@ fn enqueue_dotnet_task<const N: usize>(
     label: &str,
     args: [&str; N],
 ) -> Effect {
+    let dotnet_args = args.into_iter().collect::<Vec<_>>().join(" ");
+    let script =
+        format!("export PATH=\"$HOME/.dotnet:$HOME/.dotnet/tools:$PATH\"; dotnet {dotnet_args}");
+
     enqueue_command_task(
         state,
         label.to_string(),
-        "dotnet",
-        args.into_iter().map(|v| v.to_string()).collect(),
+        "sh",
+        vec!["-lc".to_string(), script],
+        None,
+        None,
+    )
+}
+
+fn enqueue_dotnet_vpm_task_with_bootstrap(
+    state: &mut AppState,
+    label: &str,
+    operation: &str,
+) -> Effect {
+    let script = format!(
+        "set -e; \
+if ! command -v dotnet >/dev/null 2>&1; then \
+  echo '[bootstrap] dotnet not found. Installing .NET SDK 8.0...'; \
+  DOTNET_INSTALL_DIR=\"$HOME/.dotnet\"; \
+  mkdir -p \"$DOTNET_INSTALL_DIR\"; \
+  if command -v curl >/dev/null 2>&1; then \
+    curl -fsSL https://dot.net/v1/dotnet-install.sh | sh -s -- --channel 8.0 --install-dir \"$DOTNET_INSTALL_DIR\"; \
+  elif command -v wget >/dev/null 2>&1; then \
+    wget -qO- https://dot.net/v1/dotnet-install.sh | sh -s -- --channel 8.0 --install-dir \"$DOTNET_INSTALL_DIR\"; \
+  else \
+    echo 'curl or wget is required to install dotnet automatically.' >&2; \
+    exit 1; \
+  fi; \
+  export PATH=\"$DOTNET_INSTALL_DIR:$DOTNET_INSTALL_DIR/tools:$PATH\"; \
+fi; \
+dotnet tool {operation} --global vrchat.vpm.cli"
+    );
+
+    enqueue_command_task(
+        state,
+        label.to_string(),
+        "sh",
+        vec!["-lc".to_string(), script],
         None,
         None,
     )

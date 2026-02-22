@@ -55,16 +55,13 @@ pub fn render(frame: &mut Frame, state: &AppState, area: Rect) {
             Color::DarkGray,
         ),
     };
-    lines.push(Line::styled(
-        unity_text,
-        Style::default().fg(unity_color),
-    ));
+    lines.push(Line::styled(unity_text, Style::default().fg(unity_color)));
 
     lines.push(Line::from(""));
 
     // --- Install / Update ---
     lines.push(Line::styled(
-        "[i] Install vpm CLI  [p] Update vpm CLI  (requires dotnet)",
+        "[i] Install vpm CLI  [p] Update vpm CLI  (auto-installs dotnet if missing)",
         Style::default().fg(Color::LightGreen),
     ));
 
